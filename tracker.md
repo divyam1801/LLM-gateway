@@ -4,8 +4,8 @@
 
 | Milestone | Status | Target |
 |---|---|---|
-| M1: Project Scaffold & Infra | ⬜ Not Started | Week 1 |
-| M2: Auth & API Key Management | ⬜ Not Started | Week 1-2 |
+| M1: Project Scaffold & Infra | ✅ Complete | Week 1 |
+| M2: Auth & API Key Management | 🔧 In Progress | Week 1-2 |
 | M3: Provider Adapters & Routing | ⬜ Not Started | Week 2-3 |
 | M4: Rate Limiting | ⬜ Not Started | Week 3 |
 | M5: Semantic Caching | ⬜ Not Started | Week 4 |
