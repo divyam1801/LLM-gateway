@@ -10,9 +10,9 @@
 | M4: Rate Limiting | ✅ Complete | Week 3 |
 | M5: Semantic Caching | ✅ Complete | Week 4 |
 | M6: Circuit Breaker & Failover | ✅ Complete | Week 5 |
-| M7: Kafka Event Pipeline | 🔧 In Progress | Week 5-6 |
-| M8: Analytics Consumer | ⬜ Not Started | Week 6 |
-| M9: Dashboard — Backend API | ⬜ Not Started | Week 7 |
+| M7: Kafka Event Pipeline | ✅ Complete | Week 5-6 |
+| M8: Analytics Consumer | ✅ Complete | Week 6 |
+| M9: Dashboard — Backend API | 🔧 In Progress | Week 7 |
 | M10: Dashboard — Frontend | ⬜ Not Started | Week 7-8 |
 | M11: Integration & Load Testing | ⬜ Not Started | Week 8-9 |
 | M12: Connect Real App | ⬜ Not Started | Week 9 |
