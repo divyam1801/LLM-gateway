@@ -5,9 +5,9 @@
 | Milestone | Status | Target |
 |---|---|---|
 | M1: Project Scaffold & Infra | ✅ Complete | Week 1 |
-| M2: Auth & API Key Management | 🔧 In Progress | Week 1-2 |
-| M3: Provider Adapters & Routing | ⬜ Not Started | Week 2-3 |
-| M4: Rate Limiting | ⬜ Not Started | Week 3 |
+| M2: Auth & API Key Management | ✅ Complete | Week 1-2 |
+| M3: Provider Adapters & Routing | ✅ Complete | Week 2-3 |
+| M4: Rate Limiting | 🔧 In Progress | Week 3 |
 | M5: Semantic Caching | ⬜ Not Started | Week 4 |
 | M6: Circuit Breaker & Failover | ⬜ Not Started | Week 5 |
 | M7: Kafka Event Pipeline | ⬜ Not Started | Week 5-6 |
