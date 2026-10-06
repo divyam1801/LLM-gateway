@@ -11,7 +11,7 @@ dependencies {
     implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
     implementation 'io.github.resilience4j:resilience4j-circuitbreaker:2.2.0'
 
-    implementation 'com.redis:lettucemod:4.0.0'
+    implementation 'redis.clients:jedis:5.1.5'
 
     runtimeOnly 'org.postgresql:postgresql'
     runtimeOnly 'org.flywaydb:flyway-core'

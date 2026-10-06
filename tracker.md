@@ -8,8 +8,8 @@
 | M2: Auth & API Key Management | ✅ Complete | Week 1-2 |
 | M3: Provider Adapters & Routing | ✅ Complete | Week 2-3 |
 | M4: Rate Limiting | ✅ Complete | Week 3 |
-| M5: Semantic Caching | 🔧 In Progress | Week 4 |
-| M6: Circuit Breaker & Failover | ⬜ Not Started | Week 5 |
+| M5: Semantic Caching | ✅ Complete | Week 4 |
+| M6: Circuit Breaker & Failover | 🔧 In Progress | Week 5 |
 | M7: Kafka Event Pipeline | ⬜ Not Started | Week 5-6 |
 | M8: Analytics Consumer | ⬜ Not Started | Week 6 |
 | M9: Dashboard — Backend API | ⬜ Not Started | Week 7 |
