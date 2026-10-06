@@ -1,0 +1,4 @@
+rootProject.name = 'llm-gateway'
+
+include 'gateway-service'
+include 'analytics-consumer'

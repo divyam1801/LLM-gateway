@@ -1,0 +1,76 @@
+spring:
+  application:
+    name: llm-gateway
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:llmgateway}
+    username: ${POSTGRES_USER:llmgateway}
+    password: ${POSTGRES_PASSWORD:llmgateway}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+  security:
+    user:
+      name: admin
+      password: ${ADMIN_PASSWORD:admin}
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+gateway:
+  ollama:
+    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    embedding-model: nomic-embed-text
+
+  openai:
+    base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+    api-key: ${OPENAI_API_KEY:}
+
+  cache:
+    ttl-seconds: ${CACHE_TTL_SECONDS:3600}
+    similarity-threshold: ${CACHE_SIMILARITY_THRESHOLD:0.95}
+    vector-dimensions: 768
+
+  kafka:
+    usage-topic: llm-usage-events
+
+  pricing:
+    openai:
+      gpt-4o:
+        input-per-million: 2.50
+        output-per-million: 10.00
+      gpt-4o-mini:
+        input-per-million: 0.15
+        output-per-million: 0.60
+    ollama:
+      llama3:
+        input-per-million: 0.00
+        output-per-million: 0.00

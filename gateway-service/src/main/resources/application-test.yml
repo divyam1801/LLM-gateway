@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/llmgateway_test
+    username: llmgateway
+    password: llmgateway
+
+  flyway:
+    enabled: true
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  security:
+    user:
+      password: test-admin
+
+gateway:
+  ollama:
+    base-url: http://localhost:11434
+  openai:
+    api-key: test-key
