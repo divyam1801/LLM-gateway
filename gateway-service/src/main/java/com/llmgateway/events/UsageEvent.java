@@ -7,6 +7,7 @@ public record UsageEvent(
         UUID apiKeyId,
         String provider,
         String model,
+        String requestType,
         int inputTokens,
         int outputTokens,
         double estimatedCostUsd,
@@ -25,6 +26,7 @@ public record UsageEvent(
         private UUID apiKeyId;
         private String provider;
         private String model;
+        private String requestType;
         private int inputTokens;
         private int outputTokens;
         private double estimatedCostUsd;
@@ -37,6 +39,7 @@ public record UsageEvent(
         public Builder apiKeyId(UUID val) { apiKeyId = val; return this; }
         public Builder provider(String val) { provider = val; return this; }
         public Builder model(String val) { model = val; return this; }
+        public Builder requestType(String val) { requestType = val; return this; }
         public Builder inputTokens(int val) { inputTokens = val; return this; }
         public Builder outputTokens(int val) { outputTokens = val; return this; }
         public Builder estimatedCostUsd(double val) { estimatedCostUsd = val; return this; }
@@ -47,7 +50,7 @@ public record UsageEvent(
         public Builder errorMessage(String val) { errorMessage = val; return this; }
 
         public UsageEvent build() {
-            return new UsageEvent(apiKeyId, provider, model, inputTokens, outputTokens,
+            return new UsageEvent(apiKeyId, provider, model, requestType, inputTokens, outputTokens,
                     estimatedCostUsd, latencyMs, cacheHit, fallbackUsed, status,
                     errorMessage, Instant.now());
         }

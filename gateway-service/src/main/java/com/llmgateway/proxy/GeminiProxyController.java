@@ -180,6 +180,7 @@ public class GeminiProxyController {
                     .apiKeyId(apiKey != null ? apiKey.getId() : null)
                     .provider(PROVIDER_NAME)
                     .model(model)
+                    .requestType(requestType.name().toLowerCase())
                     .inputTokens(tokens.inputTokens())
                     .outputTokens(tokens.outputTokens())
                     .estimatedCostUsd(cost)

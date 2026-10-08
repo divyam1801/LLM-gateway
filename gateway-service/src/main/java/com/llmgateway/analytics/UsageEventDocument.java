@@ -14,6 +14,7 @@ public class UsageEventDocument {
     private UUID apiKeyId;
     private String provider;
     private String model;
+    private String requestType;
     private int inputTokens;
     private int outputTokens;
     private double estimatedCostUsd;
@@ -28,6 +29,7 @@ public class UsageEventDocument {
     public UUID getApiKeyId() { return apiKeyId; }
     public String getProvider() { return provider; }
     public String getModel() { return model; }
+    public String getRequestType() { return requestType; }
     public int getInputTokens() { return inputTokens; }
     public int getOutputTokens() { return outputTokens; }
     public double getEstimatedCostUsd() { return estimatedCostUsd; }
