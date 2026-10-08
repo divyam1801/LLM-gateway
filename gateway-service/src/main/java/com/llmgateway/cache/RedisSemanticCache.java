@@ -30,8 +30,8 @@ import java.util.Set;
 public class RedisSemanticCache implements SemanticCache {
 
     private static final Logger log = LoggerFactory.getLogger(RedisSemanticCache.class);
-    private static final String INDEX_NAME = "idx:semantic_cache";
-    private static final String KEY_PREFIX = "cache:";
+    private static final String INDEX_NAME = "idx:llm-gateway:semantic-cache";
+    private static final String KEY_PREFIX = "llm-gateway:cache:prompt:";
 
     private final EmbeddingService embeddingService;
     private final StringRedisTemplate redisTemplate;
@@ -113,9 +113,11 @@ public class RedisSemanticCache implements SemanticCache {
                 double similarity = 1.0 - score;
 
                 if (similarity >= similarityThreshold) {
-                    log.info("Semantic cache hit (similarity={})", similarity);
+                    log.info("CACHE SEMANTIC HIT — similarity={}, threshold={}", String.format("%.4f", similarity), similarityThreshold);
                     String response = doc.getString("response");
                     return response != null ? Optional.of(response.getBytes(java.nio.charset.StandardCharsets.UTF_8)) : Optional.empty();
+                } else {
+                    log.info("CACHE SEMANTIC MISS — similarity={} below threshold={}", String.format("%.4f", similarity), similarityThreshold);
                 }
             }
         } catch (Exception e) {

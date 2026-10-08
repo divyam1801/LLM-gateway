@@ -40,7 +40,7 @@ public class RedisTokenBucketRateLimiter implements RateLimiter {
 
     @Override
     public RateLimitResult checkRequestLimit(UUID apiKeyId, int maxRequestsPerMinute) {
-        String key = "ratelimit:req:" + apiKeyId;
+        String key = "llm-gateway:ratelimit:rpm:" + apiKeyId;
 
         @SuppressWarnings("unchecked")
         List<Long> result = redisTemplate.execute(
@@ -63,7 +63,7 @@ public class RedisTokenBucketRateLimiter implements RateLimiter {
 
     @Override
     public void recordTokenUsage(UUID apiKeyId, int tokensUsed) {
-        String key = "ratelimit:tok:" + apiKeyId;
+        String key = "llm-gateway:ratelimit:tpm:" + apiKeyId;
         redisTemplate.opsForValue().increment(key, tokensUsed);
 
         Long ttl = redisTemplate.getExpire(key, TimeUnit.SECONDS);
@@ -74,8 +74,8 @@ public class RedisTokenBucketRateLimiter implements RateLimiter {
 
     @Override
     public RateLimitInfo getRateLimitInfo(UUID apiKeyId, int maxRpm, int maxTpm) {
-        String reqKey = "ratelimit:req:" + apiKeyId;
-        String tokKey = "ratelimit:tok:" + apiKeyId;
+        String reqKey = "llm-gateway:ratelimit:rpm:" + apiKeyId;
+        String tokKey = "llm-gateway:ratelimit:tpm:" + apiKeyId;
 
         String reqCountStr = redisTemplate.opsForValue().get(reqKey);
         String tokCountStr = redisTemplate.opsForValue().get(tokKey);

@@ -13,8 +13,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.DoubleSummaryStatistics;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.LongSummaryStatistics;
 import java.util.Map;
@@ -47,6 +51,7 @@ public class StatsController {
         long totalRequests = usageRepository.countByTimestampAfter(since);
         long cacheHits = usageRepository.countByCacheHitTrueAndTimestampAfter(since);
         long errors = usageRepository.countByStatusAndTimestampAfter("error", since);
+        long rateLimitHits = usageRepository.countByStatusAndTimestampAfter("rate_limited", since);
 
         List<UsageEventDocument> events = usageRepository
                 .findByTimestampAfterOrderByTimestampDesc(since);
@@ -60,7 +65,7 @@ public class StatsController {
                 .sum();
 
         LongSummaryStatistics latencyStats = events.stream()
-                .filter(e -> !e.isCacheHit())
+                .filter(e -> !e.isCacheHit() && !"rate_limited".equals(e.getStatus()))
                 .mapToLong(UsageEventDocument::getLatencyMs)
                 .summaryStatistics();
 
@@ -73,18 +78,19 @@ public class StatsController {
         double cacheHitRate = totalRequests > 0 ? (double) cacheHits / totalRequests * 100 : 0;
         double errorRate = totalRequests > 0 ? (double) errors / totalRequests * 100 : 0;
 
-        return Map.of(
-                "totalRequests", totalRequests,
-                "cacheHits", cacheHits,
-                "cacheHitRate", Math.round(cacheHitRate * 100.0) / 100.0,
-                "totalCost", Math.round(totalCost * 10000.0) / 10000.0,
-                "cacheSavings", Math.round(cacheSavings * 10000.0) / 10000.0,
-                "errorRate", Math.round(errorRate * 100.0) / 100.0,
-                "avgLatencyMs", latencyStats.getCount() > 0 ? latencyStats.getAverage() : 0,
-                "costByProvider", costByProvider,
-                "activeKeys", apiKeyService.listKeys().stream().filter(k -> k.isEnabled()).count(),
-                "cacheSize", semanticCache.size()
-        );
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalRequests", totalRequests);
+        result.put("cacheHits", cacheHits);
+        result.put("cacheHitRate", Math.round(cacheHitRate * 100.0) / 100.0);
+        result.put("totalCost", Math.round(totalCost * 10000.0) / 10000.0);
+        result.put("cacheSavings", Math.round(cacheSavings * 10000.0) / 10000.0);
+        result.put("errorRate", Math.round(errorRate * 100.0) / 100.0);
+        result.put("avgLatencyMs", latencyStats.getCount() > 0 ? latencyStats.getAverage() : 0);
+        result.put("costByProvider", costByProvider);
+        result.put("activeKeys", apiKeyService.listKeys().stream().filter(k -> k.isEnabled()).count());
+        result.put("cacheSize", semanticCache.size());
+        result.put("rateLimitHits", rateLimitHits);
+        return result;
     }
 
     @GetMapping("/usage")

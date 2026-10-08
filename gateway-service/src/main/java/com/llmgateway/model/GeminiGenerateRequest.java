@@ -38,4 +38,22 @@ public record GeminiGenerateRequest(
         }
         return sb.toString();
     }
+
+    public String extractLastUserMessage() {
+        if (contents == null || contents.isEmpty()) return "";
+        for (int i = contents.size() - 1; i >= 0; i--) {
+            Content content = contents.get(i);
+            if ("user".equals(content.role()) && content.parts() != null) {
+                StringBuilder sb = new StringBuilder();
+                for (Part part : content.parts()) {
+                    if (part.text() != null) {
+                        if (!sb.isEmpty()) sb.append("\n");
+                        sb.append(part.text());
+                    }
+                }
+                if (!sb.isEmpty()) return sb.toString();
+            }
+        }
+        return extractPromptText();
+    }
 }

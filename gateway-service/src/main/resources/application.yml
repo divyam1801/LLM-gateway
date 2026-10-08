@@ -62,7 +62,7 @@ gateway:
 
   cache:
     ttl-seconds: ${CACHE_TTL_SECONDS:3600}
-    similarity-threshold: ${CACHE_SIMILARITY_THRESHOLD:0.95}
+    similarity-threshold: ${CACHE_SIMILARITY_THRESHOLD:0.80}
     vector-dimensions: 768
 
   kafka:

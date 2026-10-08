@@ -66,6 +66,18 @@ public class GeminiRequestParser {
         }
     }
 
+    public String extractCacheKey(byte[] requestBody, RequestType requestType) {
+        try {
+            if (requestType == RequestType.CHAT || requestType == RequestType.CHAT_STREAM) {
+                GeminiGenerateRequest req = objectMapper.readValue(requestBody, GeminiGenerateRequest.class);
+                return req.extractLastUserMessage();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to extract cache key", e);
+        }
+        return extractPromptText(requestBody, requestType);
+    }
+
     public TokenCounts extractTokenCounts(byte[] responseBody) {
         try {
             GeminiGenerateResponse response = objectMapper.readValue(responseBody, GeminiGenerateResponse.class);

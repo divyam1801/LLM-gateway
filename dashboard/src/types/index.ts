@@ -9,6 +9,7 @@ export interface Stats {
   costByProvider: Record<string, number>
   activeKeys: number
   cacheSize: number
+  rateLimitHits: number
 }
 
 export interface UsageEvent {
