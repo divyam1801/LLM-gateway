@@ -48,6 +48,10 @@ management:
       show-details: when-authorized
 
 gateway:
+  gemini:
+    base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+    api-key: ${GEMINI_API_KEY:}
+
   ollama:
     base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
     embedding-model: nomic-embed-text
@@ -65,6 +69,13 @@ gateway:
     usage-topic: llm-usage-events
 
   pricing:
+    gemini:
+      gemini-3.5-flash:
+        input-per-million: 0.15
+        output-per-million: 0.60
+      gemini-embedding-001:
+        input-per-million: 0.00
+        output-per-million: 0.00
     openai:
       gpt-4o:
         input-per-million: 2.50
