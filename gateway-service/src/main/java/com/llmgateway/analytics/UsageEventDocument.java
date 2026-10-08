@@ -39,4 +39,18 @@ public class UsageEventDocument {
     public String getStatus() { return status; }
     public String getErrorMessage() { return errorMessage; }
     public Instant getTimestamp() { return timestamp; }
+
+    public void setApiKeyId(UUID apiKeyId) { this.apiKeyId = apiKeyId; }
+    public void setProvider(String provider) { this.provider = provider; }
+    public void setModel(String model) { this.model = model; }
+    public void setRequestType(String requestType) { this.requestType = requestType; }
+    public void setInputTokens(int inputTokens) { this.inputTokens = inputTokens; }
+    public void setOutputTokens(int outputTokens) { this.outputTokens = outputTokens; }
+    public void setEstimatedCostUsd(double estimatedCostUsd) { this.estimatedCostUsd = estimatedCostUsd; }
+    public void setLatencyMs(long latencyMs) { this.latencyMs = latencyMs; }
+    public void setCacheHit(boolean cacheHit) { this.cacheHit = cacheHit; }
+    public void setFallbackUsed(boolean fallbackUsed) { this.fallbackUsed = fallbackUsed; }
+    public void setStatus(String status) { this.status = status; }
+    public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+    public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }
 }

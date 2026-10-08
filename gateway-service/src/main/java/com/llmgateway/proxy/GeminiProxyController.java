@@ -10,6 +10,7 @@ import com.llmgateway.ratelimit.RateLimiter;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,8 +24,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Flux;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 
@@ -64,7 +67,8 @@ public class GeminiProxyController {
     }
 
     @PostMapping("/**")
-    public ResponseEntity<?> proxy(@RequestBody byte[] body, HttpServletRequest request) {
+    public ResponseEntity<?> proxy(@RequestBody byte[] body, HttpServletRequest request,
+                                   HttpServletResponse response) throws IOException {
         String fullPath = request.getRequestURI();
         String forwardPath = fullPath.replaceFirst("/llm-gateway", "");
         String model = parser.extractModel(forwardPath);
@@ -81,7 +85,8 @@ public class GeminiProxyController {
         }
 
         if (requestType == RequestType.CHAT_STREAM) {
-            return handleStreamRequest(body, forwardPath, model, requestType, apiKey, breaker);
+            handleStreamRequest(body, forwardPath, model, requestType, apiKey, breaker, response);
+            return null;
         }
 
         return handleStandardRequest(body, forwardPath, model, requestType, apiKey, breaker);
@@ -136,39 +141,60 @@ public class GeminiProxyController {
         }
     }
 
-    private ResponseEntity<?> handleStreamRequest(byte[] body, String forwardPath, String model,
-                                                   RequestType requestType, ApiKey apiKey,
-                                                   CircuitBreaker breaker) {
+    private void handleStreamRequest(byte[] body, String forwardPath, String model,
+                                      RequestType requestType, ApiKey apiKey,
+                                      CircuitBreaker breaker, HttpServletResponse response) throws IOException {
         long start = System.currentTimeMillis();
 
-        Flux<String> sseStream = webClient.post()
-                .uri(forwardPath + "?key=" + geminiApiKey + "&alt=sse")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .retrieve()
-                .bodyToFlux(String.class)
-                .doOnNext(chunk -> {
-                    TokenCounts tokens = parser.extractStreamTokenCounts(chunk);
-                    if (tokens.totalTokens() > 0 && apiKey != null) {
-                        rateLimiter.recordTokenUsage(apiKey.getId(), tokens.totalTokens());
+        response.setStatus(HttpServletResponse.SC_OK);
+        response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
+        response.setHeader("X-LLM-Gateway-Provider", PROVIDER_NAME);
+        response.setHeader("Cache-Control", "no-cache");
+        response.flushBuffer();
+
+        var outputStream = response.getOutputStream();
+        int[] totalInput = {0};
+        int[] totalOutput = {0};
+
+        try {
+            webClient.post()
+                    .uri(forwardPath + "?key=" + geminiApiKey + "&alt=sse")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(body)
+                    .retrieve()
+                    .bodyToFlux(String.class)
+                    .doOnNext(chunk -> {
+                        TokenCounts tokens = parser.extractStreamTokenCounts(chunk);
+                        if (tokens.totalTokens() > 0) {
+                            totalInput[0] += tokens.inputTokens();
+                            totalOutput[0] += tokens.outputTokens();
+                            if (apiKey != null) {
+                                rateLimiter.recordTokenUsage(apiKey.getId(), tokens.totalTokens());
+                            }
+                        }
+                        try {
+                            outputStream.write(("data: " + chunk + "\n\n").getBytes(StandardCharsets.UTF_8));
+                            outputStream.flush();
+                        } catch (IOException e) {
+                            throw new UncheckedIOException(e);
+                        }
+                    })
+                    .doOnError(e -> {
                         long latency = System.currentTimeMillis() - start;
-                        publishEvent(apiKey, model, requestType, tokens, latency, false, "success", null);
-                    }
-                })
-                .doOnError(e -> {
-                    long latency = System.currentTimeMillis() - start;
-                    log.error("Stream proxy failed", e);
-                    publishEvent(apiKey, model, requestType, TokenCounts.EMPTY, latency, false, "error", e.getMessage());
-                })
-                .map(chunk -> "data: " + chunk + "\n\n");
+                        log.error("Stream proxy failed", e);
+                        publishEvent(apiKey, model, requestType, TokenCounts.EMPTY, latency, false, "error", e.getMessage());
+                    })
+                    .blockLast(Duration.ofSeconds(120));
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("X-LLM-Gateway-Provider", PROVIDER_NAME);
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .contentType(MediaType.TEXT_EVENT_STREAM)
-                .body(sseStream);
+            long latency = System.currentTimeMillis() - start;
+            TokenCounts aggregated = new TokenCounts(totalInput[0], totalOutput[0], totalInput[0] + totalOutput[0]);
+            publishEvent(apiKey, model, requestType, aggregated, latency, false, "success", null);
+            log.info("Stream proxy complete: model={}, tokens={}, latency={}ms", model, aggregated.totalTokens(), latency);
+        } catch (Exception e) {
+            long latency = System.currentTimeMillis() - start;
+            log.error("Stream proxy failed", e);
+            publishEvent(apiKey, model, requestType, TokenCounts.EMPTY, latency, false, "error", e.getMessage());
+        }
     }
 
     private void publishEvent(ApiKey apiKey, String model, RequestType requestType,

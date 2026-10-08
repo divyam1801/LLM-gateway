@@ -59,6 +59,10 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         if (googApiKey != null && !googApiKey.isBlank()) {
             return googApiKey;
         }
+        String queryKey = request.getParameter("key");
+        if (queryKey != null && !queryKey.isBlank()) {
+            return queryKey;
+        }
         return null;
     }
 
