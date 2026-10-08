@@ -63,7 +63,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !request.getRequestURI().startsWith("/v1/");
+        String path = request.getRequestURI();
+        return !path.startsWith("/v1/") && !path.startsWith("/llm-gateway/");
     }
 
     private void setRateLimitHeaders(HttpServletResponse response, RateLimiter.RateLimitInfo info) {

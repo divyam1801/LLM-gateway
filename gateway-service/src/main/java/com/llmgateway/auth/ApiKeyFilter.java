@@ -31,15 +31,14 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        String authHeader = request.getHeader("Authorization");
+        String rawKey = extractApiKey(request);
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        if (rawKey == null) {
             sendError(response, HttpServletResponse.SC_UNAUTHORIZED,
-                    "Missing or invalid Authorization header. Expected: Bearer <api-key>");
+                    "Missing API key. Expected: Authorization: Bearer <key> or x-goog-api-key header");
             return;
         }
 
-        String rawKey = authHeader.substring(7);
         Optional<ApiKey> apiKey = apiKeyService.validateKey(rawKey);
 
         if (apiKey.isEmpty()) {
@@ -51,10 +50,22 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    private String extractApiKey(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        String googApiKey = request.getHeader("x-goog-api-key");
+        if (googApiKey != null && !googApiKey.isBlank()) {
+            return googApiKey;
+        }
+        return null;
+    }
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return !path.startsWith("/v1/");
+        return !path.startsWith("/v1/") && !path.startsWith("/llm-gateway/");
     }
 
     private void sendError(HttpServletResponse response, int status, String message) throws IOException {
