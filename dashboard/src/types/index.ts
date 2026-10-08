@@ -16,6 +16,7 @@ export interface UsageEvent {
   apiKeyId: string
   provider: string
   model: string
+  requestType: string | null
   inputTokens: number
   outputTokens: number
   estimatedCostUsd: number
