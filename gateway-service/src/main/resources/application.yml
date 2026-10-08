@@ -51,6 +51,7 @@ gateway:
   gemini:
     base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
     api-key: ${GEMINI_API_KEY:}
+    embedding-model: ${GEMINI_EMBED_MODEL:gemini-embedding-001}
 
   cache:
     ttl-seconds: ${CACHE_TTL_SECONDS:3600}

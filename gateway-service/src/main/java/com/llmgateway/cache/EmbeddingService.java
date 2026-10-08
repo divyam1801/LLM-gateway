@@ -1,7 +1,6 @@
 package com.llmgateway.cache;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -17,33 +17,41 @@ public class EmbeddingService {
     private static final Logger log = LoggerFactory.getLogger(EmbeddingService.class);
 
     private final WebClient webClient;
+    private final String apiKey;
     private final String embeddingModel;
 
-    public EmbeddingService(@Value("${gateway.ollama.base-url}") String ollamaBaseUrl,
-                            @Value("${gateway.ollama.embedding-model}") String embeddingModel) {
+    public EmbeddingService(@Value("${gateway.gemini.base-url}") String geminiBaseUrl,
+                            @Value("${gateway.gemini.api-key}") String apiKey,
+                            @Value("${gateway.gemini.embedding-model:gemini-embedding-001}") String embeddingModel) {
+        this.apiKey = apiKey;
         this.embeddingModel = embeddingModel;
         this.webClient = WebClient.builder()
-                .baseUrl(ollamaBaseUrl)
+                .baseUrl(geminiBaseUrl)
                 .build();
     }
 
     public float[] embed(String text) {
+        Map<String, Object> body = Map.of(
+                "model", "models/" + embeddingModel,
+                "content", Map.of("parts", List.of(Map.of("text", text)))
+        );
+
         JsonNode response = webClient.post()
-                .uri("/api/embeddings")
+                .uri("/v1/models/{model}:embedContent?key={key}", embeddingModel, apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(Map.of("model", embeddingModel, "prompt", text))
+                .bodyValue(body)
                 .retrieve()
                 .bodyToMono(JsonNode.class)
                 .block();
 
-        if (response == null || !response.has("embedding")) {
-            throw new RuntimeException("Failed to get embedding from Ollama");
+        if (response == null || !response.has("embedding") || !response.get("embedding").has("values")) {
+            throw new RuntimeException("Failed to get embedding from Gemini");
         }
 
-        JsonNode embeddingNode = response.get("embedding");
-        float[] embedding = new float[embeddingNode.size()];
-        for (int i = 0; i < embeddingNode.size(); i++) {
-            embedding[i] = (float) embeddingNode.get(i).asDouble();
+        JsonNode values = response.get("embedding").get("values");
+        float[] embedding = new float[values.size()];
+        for (int i = 0; i < values.size(); i++) {
+            embedding[i] = (float) values.get(i).asDouble();
         }
         return embedding;
     }
