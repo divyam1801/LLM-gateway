@@ -29,16 +29,6 @@ public class ResilienceConfig {
     }
 
     @Bean
-    public CircuitBreaker openaiCircuitBreaker(CircuitBreakerRegistry registry) {
-        return registry.circuitBreaker("openai");
-    }
-
-    @Bean
-    public CircuitBreaker ollamaCircuitBreaker(CircuitBreakerRegistry registry) {
-        return registry.circuitBreaker("ollama");
-    }
-
-    @Bean
     public CircuitBreaker geminiCircuitBreaker(CircuitBreakerRegistry registry) {
         return registry.circuitBreaker("gemini");
     }

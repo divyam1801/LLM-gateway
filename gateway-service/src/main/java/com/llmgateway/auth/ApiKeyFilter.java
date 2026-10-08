@@ -65,7 +65,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return !path.startsWith("/v1/") && !path.startsWith("/llm-gateway/");
+        return !path.startsWith("/llm-gateway/");
     }
 
     private void sendError(HttpServletResponse response, int status, String message) throws IOException {

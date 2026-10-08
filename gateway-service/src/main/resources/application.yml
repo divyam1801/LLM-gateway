@@ -52,14 +52,6 @@ gateway:
     base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
     api-key: ${GEMINI_API_KEY:}
 
-  ollama:
-    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-    embedding-model: nomic-embed-text
-
-  openai:
-    base-url: ${OPENAI_BASE_URL:https://api.openai.com}
-    api-key: ${OPENAI_API_KEY:}
-
   cache:
     ttl-seconds: ${CACHE_TTL_SECONDS:3600}
     similarity-threshold: ${CACHE_SIMILARITY_THRESHOLD:0.95}
@@ -74,16 +66,5 @@ gateway:
         input-per-million: 0.15
         output-per-million: 0.60
       gemini-embedding-001:
-        input-per-million: 0.00
-        output-per-million: 0.00
-    openai:
-      gpt-4o:
-        input-per-million: 2.50
-        output-per-million: 10.00
-      gpt-4o-mini:
-        input-per-million: 0.15
-        output-per-million: 0.60
-    ollama:
-      llama3:
         input-per-million: 0.00
         output-per-million: 0.00

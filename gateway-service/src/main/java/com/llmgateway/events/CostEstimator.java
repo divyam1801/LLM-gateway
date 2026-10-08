@@ -13,8 +13,6 @@ public class CostEstimator {
     private Map<String, Map<String, ModelPricing>> providers = new HashMap<>();
 
     public void setGemini(Map<String, ModelPricing> gemini) { providers.put("gemini", gemini); }
-    public void setOpenai(Map<String, ModelPricing> openai) { providers.put("openai", openai); }
-    public void setOllama(Map<String, ModelPricing> ollama) { providers.put("ollama", ollama); }
 
     public double estimate(String provider, String model, int inputTokens, int outputTokens) {
         Map<String, ModelPricing> models = providers.get(provider);

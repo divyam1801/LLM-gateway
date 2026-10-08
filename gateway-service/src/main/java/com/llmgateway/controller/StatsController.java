@@ -4,8 +4,8 @@ import com.llmgateway.analytics.UsageEventDocument;
 import com.llmgateway.analytics.UsageRepository;
 import com.llmgateway.auth.ApiKeyService;
 import com.llmgateway.cache.SemanticCache;
-import com.llmgateway.provider.ProviderRouter;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,16 +28,16 @@ public class StatsController {
     private final UsageRepository usageRepository;
     private final ApiKeyService apiKeyService;
     private final SemanticCache semanticCache;
-    private final ProviderRouter providerRouter;
+    private final CircuitBreakerRegistry circuitBreakerRegistry;
 
     public StatsController(UsageRepository usageRepository,
                            ApiKeyService apiKeyService,
                            SemanticCache semanticCache,
-                           ProviderRouter providerRouter) {
+                           CircuitBreakerRegistry circuitBreakerRegistry) {
         this.usageRepository = usageRepository;
         this.apiKeyService = apiKeyService;
         this.semanticCache = semanticCache;
-        this.providerRouter = providerRouter;
+        this.circuitBreakerRegistry = circuitBreakerRegistry;
     }
 
     @GetMapping("/stats")
@@ -101,7 +101,8 @@ public class StatsController {
 
     @GetMapping("/providers")
     public List<Map<String, Object>> getProviders() {
-        Map<String, CircuitBreaker.State> states = providerRouter.getCircuitBreakerStates();
+        Map<String, CircuitBreaker.State> states = circuitBreakerRegistry.getAllCircuitBreakers()
+                .stream().collect(Collectors.toMap(CircuitBreaker::getName, CircuitBreaker::getState));
         Instant since = Instant.now().minus(1, ChronoUnit.HOURS);
 
         List<UsageEventDocument> recentEvents = usageRepository
