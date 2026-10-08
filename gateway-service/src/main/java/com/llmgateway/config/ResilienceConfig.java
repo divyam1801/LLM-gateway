@@ -38,6 +38,11 @@ public class ResilienceConfig {
         return registry.circuitBreaker("ollama");
     }
 
+    @Bean
+    public CircuitBreaker geminiCircuitBreaker(CircuitBreakerRegistry registry) {
+        return registry.circuitBreaker("gemini");
+    }
+
     public static class ClientErrorException extends RuntimeException {
         public ClientErrorException(String message) {
             super(message);
