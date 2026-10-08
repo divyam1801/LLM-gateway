@@ -99,7 +99,7 @@ public class StatsController {
         return usageRepository.findByTimestampAfterOrderByTimestampDesc(since);
     }
 
-    @GetMapping("/providers")
+    @GetMapping("/providers/health")
     public List<Map<String, Object>> getProviders() {
         Map<String, CircuitBreaker.State> states = circuitBreakerRegistry.getAllCircuitBreakers()
                 .stream().collect(Collectors.toMap(CircuitBreaker::getName, CircuitBreaker::getState));
