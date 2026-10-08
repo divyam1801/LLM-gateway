@@ -1,8 +1,5 @@
 package com.llmgateway.cache;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.llmgateway.model.ChatResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,7 +20,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.Map;
@@ -38,7 +34,6 @@ public class RedisSemanticCache implements SemanticCache {
     private static final String KEY_PREFIX = "cache:";
 
     private final EmbeddingService embeddingService;
-    private final ObjectMapper objectMapper;
     private final StringRedisTemplate redisTemplate;
     private final JedisPooled jedis;
     private final double similarityThreshold;
@@ -46,7 +41,6 @@ public class RedisSemanticCache implements SemanticCache {
     private final long ttlSeconds;
 
     public RedisSemanticCache(EmbeddingService embeddingService,
-                              ObjectMapper objectMapper,
                               StringRedisTemplate redisTemplate,
                               @Value("${spring.data.redis.host}") String redisHost,
                               @Value("${spring.data.redis.port}") int redisPort,
@@ -54,7 +48,6 @@ public class RedisSemanticCache implements SemanticCache {
                               @Value("${gateway.cache.vector-dimensions}") int vectorDimensions,
                               @Value("${gateway.cache.ttl-seconds}") long ttlSeconds) {
         this.embeddingService = embeddingService;
-        this.objectMapper = objectMapper;
         this.redisTemplate = redisTemplate;
         this.jedis = new JedisPooled(redisHost, redisPort);
         this.similarityThreshold = similarityThreshold;
@@ -92,13 +85,14 @@ public class RedisSemanticCache implements SemanticCache {
     }
 
     @Override
-    public Optional<ChatResponse> lookup(String promptText, String model) {
+    public Optional<byte[]> lookup(String promptText, String model) {
         String promptHash = sha256(promptText);
         String exactKey = KEY_PREFIX + promptHash;
         Map<String, String> exactMatch = jedis.hgetAll(exactKey);
         if (!exactMatch.isEmpty() && model.equals(exactMatch.get("model"))) {
             log.info("Exact cache hit for prompt hash {}", promptHash);
-            return parseResponse(exactMatch.get("response"));
+            String response = exactMatch.get("response");
+            return response != null ? Optional.of(response.getBytes(java.nio.charset.StandardCharsets.UTF_8)) : Optional.empty();
         }
 
         try {
@@ -120,7 +114,8 @@ public class RedisSemanticCache implements SemanticCache {
 
                 if (similarity >= similarityThreshold) {
                     log.info("Semantic cache hit (similarity={})", similarity);
-                    return parseResponse(doc.getString("response"));
+                    String response = doc.getString("response");
+                    return response != null ? Optional.of(response.getBytes(java.nio.charset.StandardCharsets.UTF_8)) : Optional.empty();
                 }
             }
         } catch (Exception e) {
@@ -131,17 +126,16 @@ public class RedisSemanticCache implements SemanticCache {
     }
 
     @Override
-    public void store(String promptText, String model, ChatResponse response) {
+    public void store(String promptText, String model, byte[] response) {
         try {
             String promptHash = sha256(promptText);
             float[] embedding = embeddingService.embed(promptText);
-            String responseJson = objectMapper.writeValueAsString(response);
 
             String key = KEY_PREFIX + promptHash;
             Map<String, String> fields = new HashMap<>();
             fields.put("prompt_hash", promptHash);
             fields.put("model", model);
-            fields.put("response", responseJson);
+            fields.put("response", new String(response, java.nio.charset.StandardCharsets.UTF_8));
 
             jedis.hset(key, fields);
             jedis.hset(key.getBytes(), "embedding".getBytes(), floatsToBytes(embedding));
@@ -166,15 +160,6 @@ public class RedisSemanticCache implements SemanticCache {
     public long size() {
         Set<String> keys = redisTemplate.keys(KEY_PREFIX + "*");
         return keys != null ? keys.size() : 0;
-    }
-
-    private Optional<ChatResponse> parseResponse(String json) {
-        try {
-            return Optional.of(objectMapper.readValue(json, ChatResponse.class));
-        } catch (JsonProcessingException e) {
-            log.error("Failed to parse cached response", e);
-            return Optional.empty();
-        }
     }
 
     private static byte[] floatsToBytes(float[] floats) {
