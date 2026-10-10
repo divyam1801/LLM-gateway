@@ -4,9 +4,13 @@ import java.util.Optional;
 
 public interface SemanticCache {
 
-    Optional<byte[]> lookup(String promptText, String model);
+    record LookupResult(Optional<byte[]> response, float[] embedding, double similarity) {
+        public static final LookupResult EMPTY = new LookupResult(Optional.empty(), null, -1);
+    }
 
-    void store(String promptText, String model, byte[] response);
+    LookupResult lookup(String promptText, String model);
+
+    void store(String promptText, String model, byte[] response, float[] embedding);
 
     void flush();
 

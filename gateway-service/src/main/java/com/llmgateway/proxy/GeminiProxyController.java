@@ -94,35 +94,38 @@ public class GeminiProxyController {
                     "error", Map.of("message", "Gemini provider is currently unavailable", "code", 503)));
         }
 
+        float[] cachedEmbedding = null;
         if (requestType == RequestType.CHAT || requestType == RequestType.CHAT_STREAM) {
             String cacheKey = parser.extractCacheKey(body, requestType);
             if (!cacheKey.isBlank()) {
-                Optional<byte[]> cached = semanticCache.lookup(cacheKey, model);
-                if (cached.isPresent()) {
-                    log.info("CACHE HIT — returning cached response for model={}, query='{}...'",
-                            model, cacheKey.substring(0, Math.min(80, cacheKey.length())));
+                SemanticCache.LookupResult lookupResult = semanticCache.lookup(cacheKey, model);
+                cachedEmbedding = lookupResult.embedding();
+                if (lookupResult.response().isPresent()) {
+                    log.info("CACHE HIT — similarity={}, model={}, query='{}...'",
+                            String.format("%.4f", lookupResult.similarity()), model, cacheKey.substring(0, Math.min(80, cacheKey.length())));
                     publishEvent(apiKey, model, requestType, TokenCounts.EMPTY, 0, true, "success", null);
 
                     if (requestType == RequestType.CHAT_STREAM) {
-                        return handleCachedStreamResponse(cached.get(), response);
+                        return handleCachedStreamResponse(lookupResult.response().get(), response);
                     }
                     return ResponseEntity.ok()
                             .contentType(MediaType.APPLICATION_JSON)
                             .header("X-LLM-Gateway-Provider", PROVIDER_NAME)
                             .header("X-LLM-Gateway-Cache", "HIT")
-                            .body(cached.get());
+                            .body(lookupResult.response().get());
                 }
-                log.info("CACHE MISS — forwarding to Gemini API for model={}, query='{}...'",
+                log.info("CACHE MISS — similarity={}, model={}, query='{}...'",
+                        lookupResult.similarity() >= 0 ? String.format("%.4f", lookupResult.similarity()) : "none",
                         model, cacheKey.substring(0, Math.min(80, cacheKey.length())));
             }
         }
 
         if (requestType == RequestType.CHAT_STREAM) {
-            handleStreamRequest(body, forwardPath, model, requestType, apiKey, breaker, response);
+            handleStreamRequest(body, forwardPath, model, requestType, apiKey, breaker, response, cachedEmbedding);
             return null;
         }
 
-        return handleStandardRequest(body, forwardPath, model, requestType, apiKey, breaker);
+        return handleStandardRequest(body, forwardPath, model, requestType, apiKey, breaker, cachedEmbedding);
     }
 
     private ResponseEntity<?> handleCachedStreamResponse(byte[] cachedResponse, HttpServletResponse response)
@@ -142,7 +145,7 @@ public class GeminiProxyController {
 
     private ResponseEntity<?> handleStandardRequest(byte[] body, String forwardPath, String model,
                                                      RequestType requestType, ApiKey apiKey,
-                                                     CircuitBreaker breaker) {
+                                                     CircuitBreaker breaker, float[] cachedEmbedding) {
         long start = System.currentTimeMillis();
         String cacheKey = parser.extractCacheKey(body, requestType);
 
@@ -167,13 +170,13 @@ public class GeminiProxyController {
             }
 
             if (requestType == RequestType.CHAT && !cacheKey.isBlank()) {
-                semanticCache.store(cacheKey, model, responseBody);
+                semanticCache.store(cacheKey, model, responseBody, cachedEmbedding);
                 log.info("CACHE STORE — cached response for model={}, tokens={}", model, tokens.totalTokens());
             }
 
             publishEvent(apiKey, model, requestType, tokens, latency, false, "success", null);
 
-            log.info("Gemini API response: model={}, tokens={}, latency={}ms, cacheHit=false", model, tokens.totalTokens(), latency);
+            log.info("Gemini API response: model={}, status=200, tokens={}, latency={}ms, cacheHit=false", model, tokens.totalTokens(), latency);
 
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_JSON)
@@ -183,7 +186,7 @@ public class GeminiProxyController {
 
         } catch (WebClientResponseException e) {
             long latency = System.currentTimeMillis() - start;
-            log.error("Gemini API error: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+            log.error("Gemini API error: model={}, status={}, body={}", model, e.getStatusCode().value(), e.getResponseBodyAsString());
             publishEvent(apiKey, model, requestType, TokenCounts.EMPTY, latency, false, "error", e.getMessage());
 
             return ResponseEntity.status(e.getStatusCode())
@@ -201,7 +204,8 @@ public class GeminiProxyController {
 
     private void handleStreamRequest(byte[] body, String forwardPath, String model,
                                       RequestType requestType, ApiKey apiKey,
-                                      CircuitBreaker breaker, HttpServletResponse response) throws IOException {
+                                      CircuitBreaker breaker, HttpServletResponse response,
+                                      float[] cachedEmbedding) throws IOException {
         long start = System.currentTimeMillis();
         String cacheKey = parser.extractCacheKey(body, requestType);
 
@@ -245,7 +249,7 @@ public class GeminiProxyController {
                     })
                     .doOnError(e -> {
                         long latency = System.currentTimeMillis() - start;
-                        log.error("Stream proxy failed", e);
+                        log.error("Stream proxy failed: model={}, latency={}ms", model, latency, e);
                         publishEvent(apiKey, model, requestType, TokenCounts.EMPTY, latency, false, "error", e.getMessage());
                     })
                     .blockLast(Duration.ofSeconds(120));
@@ -256,14 +260,14 @@ public class GeminiProxyController {
 
             if (!cacheKey.isBlank() && responseText.length() > 0) {
                 String syntheticResponse = buildSyntheticResponse(responseText.toString(), model);
-                semanticCache.store(cacheKey, model, syntheticResponse.getBytes(StandardCharsets.UTF_8));
+                semanticCache.store(cacheKey, model, syntheticResponse.getBytes(StandardCharsets.UTF_8), cachedEmbedding);
                 log.info("CACHE STORE — cached streaming response for model={}, tokens={}", model, aggregated.totalTokens());
             }
 
-            log.info("Gemini API stream complete: model={}, tokens={}, latency={}ms, cacheHit=false", model, aggregated.totalTokens(), latency);
+            log.info("Gemini API stream complete: model={}, status=200, tokens={}, latency={}ms, cacheHit=false", model, aggregated.totalTokens(), latency);
         } catch (Exception e) {
             long latency = System.currentTimeMillis() - start;
-            log.error("Stream proxy failed", e);
+            log.error("Stream proxy failed: model={}, latency={}ms", model, latency, e);
             publishEvent(apiKey, model, requestType, TokenCounts.EMPTY, latency, false, "error", e.getMessage());
         }
     }

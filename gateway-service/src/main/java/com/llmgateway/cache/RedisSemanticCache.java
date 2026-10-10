@@ -85,14 +85,16 @@ public class RedisSemanticCache implements SemanticCache {
     }
 
     @Override
-    public Optional<byte[]> lookup(String promptText, String model) {
+    public LookupResult lookup(String promptText, String model) {
         String promptHash = sha256(promptText);
         String exactKey = KEY_PREFIX + promptHash;
         Map<String, String> exactMatch = jedis.hgetAll(exactKey);
         if (!exactMatch.isEmpty() && model.equals(exactMatch.get("model"))) {
             log.info("Exact cache hit for prompt hash {}", promptHash);
             String response = exactMatch.get("response");
-            return response != null ? Optional.of(response.getBytes(java.nio.charset.StandardCharsets.UTF_8)) : Optional.empty();
+            return new LookupResult(
+                    response != null ? Optional.of(response.getBytes(java.nio.charset.StandardCharsets.UTF_8)) : Optional.empty(),
+                    null, 1.0);
         }
 
         try {
@@ -106,32 +108,38 @@ public class RedisSemanticCache implements SemanticCache {
                     .dialect(2);
 
             SearchResult result = jedis.ftSearch(INDEX_NAME, query);
+            double similarity = -1;
 
             if (result.getTotalResults() > 0) {
                 var doc = result.getDocuments().get(0);
-                double score = Double.parseDouble(doc.getString("score"));
-                double similarity = 1.0 - score;
+                similarity = 1.0 - Double.parseDouble(doc.getString("score"));
 
                 if (similarity >= similarityThreshold) {
                     log.info("CACHE SEMANTIC HIT — similarity={}, threshold={}", String.format("%.4f", similarity), similarityThreshold);
                     String response = doc.getString("response");
-                    return response != null ? Optional.of(response.getBytes(java.nio.charset.StandardCharsets.UTF_8)) : Optional.empty();
+                    return new LookupResult(
+                            response != null ? Optional.of(response.getBytes(java.nio.charset.StandardCharsets.UTF_8)) : Optional.empty(),
+                            embedding, similarity);
                 } else {
                     log.info("CACHE SEMANTIC MISS — similarity={} below threshold={}", String.format("%.4f", similarity), similarityThreshold);
                 }
             }
+
+            return new LookupResult(Optional.empty(), embedding, similarity);
         } catch (Exception e) {
             log.warn("Semantic cache lookup failed, proceeding without cache", e);
         }
 
-        return Optional.empty();
+        return LookupResult.EMPTY;
     }
 
     @Override
-    public void store(String promptText, String model, byte[] response) {
+    public void store(String promptText, String model, byte[] response, float[] embedding) {
         try {
             String promptHash = sha256(promptText);
-            float[] embedding = embeddingService.embed(promptText);
+            if (embedding == null) {
+                embedding = embeddingService.embed(promptText);
+            }
 
             String key = KEY_PREFIX + promptHash;
             Map<String, String> fields = new HashMap<>();

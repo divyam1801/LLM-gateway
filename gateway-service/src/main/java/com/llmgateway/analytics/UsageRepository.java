@@ -11,10 +11,4 @@ public interface UsageRepository extends MongoRepository<UsageEventDocument, Str
     List<UsageEventDocument> findByTimestampAfterOrderByTimestampDesc(Instant after);
 
     List<UsageEventDocument> findByApiKeyIdAndTimestampAfterOrderByTimestampDesc(UUID apiKeyId, Instant after);
-
-    long countByTimestampAfter(Instant after);
-
-    long countByCacheHitTrueAndTimestampAfter(Instant after);
-
-    long countByStatusAndTimestampAfter(String status, Instant after);
 }

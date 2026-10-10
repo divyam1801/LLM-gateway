@@ -48,18 +48,24 @@ public class StatsController {
     public Map<String, Object> getStats(@RequestParam(defaultValue = "7") int days) {
         Instant since = Instant.now().minus(days, ChronoUnit.DAYS);
 
-        long totalRequests = usageRepository.countByTimestampAfter(since);
-        long cacheHits = usageRepository.countByCacheHitTrueAndTimestampAfter(since);
-        long errors = usageRepository.countByStatusAndTimestampAfter("error", since);
-        long rateLimitHits = usageRepository.countByStatusAndTimestampAfter("rate_limited", since);
-
         List<UsageEventDocument> events = usageRepository
                 .findByTimestampAfterOrderByTimestampDesc(since);
+
+        long totalRequests = events.size();
+        long errors = events.stream().filter(e -> "error".equals(e.getStatus())).count();
+        long rateLimitHits = events.stream().filter(e -> "rate_limited".equals(e.getStatus())).count();
+
+        List<UsageEventDocument> cacheableEvents = events.stream()
+                .filter(e -> !"embedding".equals(e.getRequestType()))
+                .toList();
+
+        long cacheableRequests = cacheableEvents.size();
+        long cacheHits = cacheableEvents.stream().filter(UsageEventDocument::isCacheHit).count();
 
         double totalCost = events.stream()
                 .mapToDouble(UsageEventDocument::getEstimatedCostUsd).sum();
 
-        double cacheSavings = events.stream()
+        double cacheSavings = cacheableEvents.stream()
                 .filter(UsageEventDocument::isCacheHit)
                 .mapToDouble(e -> estimateUncachedCost(e))
                 .sum();
@@ -75,7 +81,7 @@ public class StatsController {
                         Collectors.summingDouble(UsageEventDocument::getEstimatedCostUsd)
                 ));
 
-        double cacheHitRate = totalRequests > 0 ? (double) cacheHits / totalRequests * 100 : 0;
+        double cacheHitRate = cacheableRequests > 0 ? (double) cacheHits / cacheableRequests * 100 : 0;
         double errorRate = totalRequests > 0 ? (double) errors / totalRequests * 100 : 0;
 
         Map<String, Object> result = new HashMap<>();

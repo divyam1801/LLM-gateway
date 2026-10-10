@@ -18,7 +18,9 @@ function CacheAnalytics() {
     return () => clearInterval(interval)
   }, [])
 
-  const hitRateByDay = events.reduce<Record<string, { hits: number; total: number }>>((acc, e) => {
+  const cacheableEvents = events.filter(e => e.requestType !== 'embedding')
+
+  const hitRateByDay = cacheableEvents.reduce<Record<string, { hits: number; total: number }>>((acc, e) => {
     const day = e.timestamp.split('T')[0]
     if (!acc[day]) acc[day] = { hits: 0, total: 0 }
     acc[day].total++
@@ -33,7 +35,7 @@ function CacheAnalytics() {
       hitRate: total > 0 ? Math.round(hits / total * 100) : 0
     }))
 
-  const recentEvents = events.slice(0, 20)
+  const recentEvents = cacheableEvents.slice(0, 20)
 
   const handleFlush = () => {
     if (confirm('Flush the entire semantic cache?')) {

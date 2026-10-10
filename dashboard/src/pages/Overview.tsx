@@ -23,7 +23,7 @@ function Overview() {
     const hour = e.timestamp.slice(0, 13) + ':00'
     if (!acc[hour]) acc[hour] = { requests: 0, cacheHits: 0, rateLimited: 0 }
     acc[hour].requests += 1
-    if (e.cacheHit) acc[hour].cacheHits += 1
+    if (e.cacheHit && e.requestType !== 'embedding') acc[hour].cacheHits += 1
     if (e.status === 'rate_limited') acc[hour].rateLimited += 1
     return acc
   }, {})
@@ -188,13 +188,20 @@ function Overview() {
                       <td style={{ padding: '6px 12px' }}>{e.inputTokens + e.outputTokens}</td>
                       <td style={{ padding: '6px 12px' }}>{e.latencyMs}ms</td>
                       <td style={{ padding: '6px 12px' }}>
-                        <span style={{
-                          padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 600,
-                          background: e.cacheHit ? '#dcfce7' : '#fef9c3',
-                          color: e.cacheHit ? '#166534' : '#854d0e'
-                        }}>
-                          {e.cacheHit ? 'HIT' : 'MISS'}
-                        </span>
+                        {e.requestType === 'embedding' ? (
+                          <span style={{
+                            padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                            background: '#f3f4f6', color: '#9ca3af'
+                          }}>N/A</span>
+                        ) : (
+                          <span style={{
+                            padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                            background: e.cacheHit ? '#dcfce7' : '#fef9c3',
+                            color: e.cacheHit ? '#166534' : '#854d0e'
+                          }}>
+                            {e.cacheHit ? 'HIT' : 'MISS'}
+                          </span>
+                        )}
                       </td>
                       <td style={{ padding: '6px 12px' }}>
                         <span style={{

@@ -19,12 +19,15 @@ public class EmbeddingService {
     private final WebClient webClient;
     private final String apiKey;
     private final String embeddingModel;
+    private final int vectorDimensions;
 
     public EmbeddingService(@Value("${gateway.gemini.base-url}") String geminiBaseUrl,
                             @Value("${gateway.gemini.api-key}") String apiKey,
-                            @Value("${gateway.gemini.embedding-model:gemini-embedding-001}") String embeddingModel) {
+                            @Value("${gateway.gemini.embedding-model:gemini-embedding-001}") String embeddingModel,
+                            @Value("${gateway.cache.vector-dimensions:768}") int vectorDimensions) {
         this.apiKey = apiKey;
         this.embeddingModel = embeddingModel;
+        this.vectorDimensions = vectorDimensions;
         this.webClient = WebClient.builder()
                 .baseUrl(geminiBaseUrl)
                 .build();
@@ -33,7 +36,8 @@ public class EmbeddingService {
     public float[] embed(String text) {
         Map<String, Object> body = Map.of(
                 "model", "models/" + embeddingModel,
-                "content", Map.of("parts", List.of(Map.of("text", text)))
+                "content", Map.of("parts", List.of(Map.of("text", text))),
+                "outputDimensionality", vectorDimensions
         );
 
         JsonNode response = webClient.post()

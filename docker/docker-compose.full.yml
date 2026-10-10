@@ -105,6 +105,19 @@ services:
       kafka:
         condition: service_healthy
 
+  dashboard:
+    build:
+      context: ../dashboard
+    container_name: llm-gateway-dashboard
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../dashboard/src:/app/src
+    environment:
+      VITE_API_BASE_URL: http://gateway:8080
+    depends_on:
+      - gateway
+
   # ── AI Knowledge Assistant ──
 
   ka-backend:
@@ -119,7 +132,7 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       GEMINI_EMBED_MODEL: ${GEMINI_EMBED_MODEL:-gemini-embedding-001}
-      GEMINI_CHAT_MODEL: ${GEMINI_CHAT_MODEL:-gemini-3.5-flash}
+      GEMINI_CHAT_MODEL: ${GEMINI_CHAT_MODEL:-gemini-3.5-flash-lite}
       GATEWAY_BASE_URL: http://gateway:8080/llm-gateway
       GATEWAY_API_KEY: ${GATEWAY_API_KEY:-}
       UPLOAD_DIR: /data/uploads
@@ -146,7 +159,7 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       GEMINI_EMBED_MODEL: ${GEMINI_EMBED_MODEL:-gemini-embedding-001}
-      GEMINI_CHAT_MODEL: ${GEMINI_CHAT_MODEL:-gemini-3.5-flash}
+      GEMINI_CHAT_MODEL: ${GEMINI_CHAT_MODEL:-gemini-3.5-flash-lite}
       GATEWAY_BASE_URL: http://gateway:8080/llm-gateway
       GATEWAY_API_KEY: ${GATEWAY_API_KEY:-}
       UPLOAD_DIR: /data/uploads
